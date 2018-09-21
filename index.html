@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Tecnicas de Otimização | Unisinos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            width: 100vw;
+            height: 100vh;
+            background-color: #333;
+        }
+        canvas {
+            border: 1px solid #FFF;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="myCanvas" width="400" height="400" onclick="getPosition(event)"></canvas>
+
+    <button onclick="init()">Verificar</button>
+
+    <script>
+        // Angulos > 180 = Concavos
+        // Angulos < 180 = Convexos
+        class Point {
+            constructor(x,y) {
+                this.x = x;
+                this.y = y;
+                this.id = null;
+                this.angle = null;
+                this.isBorder = false;
+                this.nx = 0;
+                this.ny = 0;
+                this.module = 0;
+            }
+            setId(id) {
+                this.id = id;
+            }
+            setAngle(angle) {
+                this.angle = angle;
+            }
+            setBorder(bool) {
+                this.isBorder = bool;
+            }
+            setNormalizeX(normalize_x) {
+                this.nx = normalize_x;
+            }
+            setNormalizeY(normalize_y) {
+                this.ny = normalize_y;
+            }
+            setModule(data) {
+                this.module = data;
+            }
+        }
+        var objects = [];
+        var pixel = 5;
+        var id = 0;
+        var lowerY = null;
+        var c = document.getElementById("myCanvas");
+        var ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff";
+        function getPosition(event) {
+            var p = new Point(event.clientX, event.clientY);
+            p.setId(id);
+            objects.push(p);
+            ctx.fillRect(event.clientX,event.clientY,pixel,pixel);
+            id++;
+        }
+        // Função para pegar a NORMA / MODULO do vetor
+        function norm(vec) {
+            console.log(vec);
+            return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+            /*var x = vec.x / norm;
+            var y = vec.y / norm;
+            var m = Math.sqrt(x*x + y*y);
+            console.log("|vec|=" + m);*/
+        }
+        // Produto interno
+        function dotProduct(vec1, vec2) {
+            return (vec1.x * vec2.x + vec1.y * vec2.y);
+        }
+        // Calcula o angulo entre dois vetores
+        function computeAngle(v1, v2) {
+            var n1 = norm(v1);
+            var x1 = v1.x / n1;
+            var y1 = v1.y / n1;
+            v1.setNormalizeX(x1);
+            v1.setNormalizeY(y1);
+            v1.setModule(n1);
+            
+            var n2 = norm(v2);
+            var x2 = v2.x / n2;
+            var y2 = v2.y / n2;
+            v2.setNormalizeX(x2);
+            v2.setNormalizeY(y2);
+            v2.setModule(n2);
+            var ac = dotProduct(v1, v2);
+            var norma = norm({x:v1.nx, y:v1.ny}) * norm({x:v2.nx, y:v2.ny});
+            return Math.acos( ac / norma );
+        }
+        function checkLowerY() {
+            var lowY = null;
+            var vec = null;
+            objects.map(function(obj, index) {
+                if(index === 0) {
+                    lowY = obj.y;
+                    vec = obj;
+                } else {
+                    if(obj.y < lowY) {
+                        lowY = obj.y;
+                        vec = obj;
+                    }
+                }
+            });
+            return vec;
+        }
+        function sortByAngle(_objects, vecLowerY) {
+            var vecsAngle = [];
+            objects.map(function(obj, index) {
+                if(vecLowerY.id != obj.id) {
+                    var angle = computeAngle(vecLowerY, obj);
+                    var degree = radiansToDegree(angle);
+                    obj.setAngle(degree);
+                }
+            });
+        }
+        function radiansToDegree(radians) {
+            return radians * 180 / Math.PI;
+        }
+        function init() {
+            lowerY = checkLowerY();
+            sortByAngle(objects, lowerY);
+            var res = objects.sort(function(a, b) {
+                return a.angle - b.angle;
+            });
+            var objBorders = [];
+            objects.map(function(vec, index){
+                if(index != 0) {
+                    var result = null;  
+                    if(index != objects.length-1) {
+                        result = ccw(objects[index-1], vec, objects[index+1]);
+                    } else {
+                        result = ccw(objects[index-1], vec, objects[0]);
+                    }
+                    if(result >= 0) {
+                        objects[index].setBorder(true);
+                        objBorders.push(vec);
+                    } else {
+                        var current = index - 1;
+                        var prev = current - 1;
+                        var next = index + 1;
+                        result = ccw(objects[prev], objects[current], objects[next]);
+                        if(result >= 0) {
+                            objects[current].setBorder(true);
+                            objBorders.push(objects[current]);
+                        }
+                    }
+                } else {
+                    objects[index].setBorder(true);
+                    objBorders.push(vec);
+                }
+            });
+            drawObjects(objBorders);
+        }
+        function ccw(p1, p2, p3) {
+            // ccw > 0: counter-clockwise; ccw < 0: clockwise; ccw = 0: collinear
+            return (p2.nx - p1.nx) * (p3.ny - p1.ny) - (p2.ny - p1.ny) * (p3.nx - p1.nx);
+        }
+        function drawObjects(_objects) {
+            _objects.map(function(vec, index){
+                if(vec.isBorder) {
+                    if(index != _objects.length-1) {
+                        ctx.moveTo(vec.x,vec.y);
+                        ctx.lineTo(_objects[index+1].x,_objects[index+1].y);
+                    } else {
+                        ctx.moveTo(vec.x,vec.y);
+                        ctx.lineTo(_objects[0].x,_objects[0].y);
+                    }
+                    ctx.strokeStyle="yellow";
+                    ctx.lineWidth = pixel;
+                }
+            });
+            ctx.stroke();
+        }
+    
+        //ctx.moveTo(10,10);
+        //ctx.lineTo(200,100);
+        //ctx.stroke();
+        /*
+        function ccw(p1, p2, p3) {
+            // ccw > 0: counter-clockwise; ccw < 0: clockwise; ccw = 0: collinear
+            return (p2.x - p1.x) * (p3.y - p1.y)
+            - (p2.y - p1.y) * (p3.x - p1.x);
+        }
+        function polarAngle(p) {
+            return Math.atan(p.y / p.x);
+        }
+        function dotProduct(vec1, vec2) {
+            return (vec1.x * vec2.x + vec1.y * vec2.y);
+        }
+        function norm(vec) {
+            return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+        }
+        function computeAngle(v1, v2) {
+            var ac = dotProduct(v1, v2);
+            return Math.acos(ac / (norm(v1) * norm(v2))) * ONE_RADIAN;
+        }*/
+    </script>
+</body>
+</html>
