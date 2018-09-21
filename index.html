@@ -15,6 +15,7 @@
             border: 1px solid #FFF;
         }
     </style>
+    <script src="assets/js/Point.js"></script>
 </head>
 <body>
     <canvas id="myCanvas" width="400" height="400" onclick="getPosition(event)"></canvas>
@@ -24,36 +25,6 @@
     <script>
         // Angulos > 180 = Concavos
         // Angulos < 180 = Convexos
-        class Point {
-            constructor(x,y) {
-                this.x = x;
-                this.y = y;
-                this.id = null;
-                this.angle = null;
-                this.isBorder = false;
-                this.nx = 0;
-                this.ny = 0;
-                this.module = 0;
-            }
-            setId(id) {
-                this.id = id;
-            }
-            setAngle(angle) {
-                this.angle = angle;
-            }
-            setBorder(bool) {
-                this.isBorder = bool;
-            }
-            setNormalizeX(normalize_x) {
-                this.nx = normalize_x;
-            }
-            setNormalizeY(normalize_y) {
-                this.ny = normalize_y;
-            }
-            setModule(data) {
-                this.module = data;
-            }
-        }
         var objects = [];
         var pixel = 5;
         var id = 0;
@@ -70,7 +41,6 @@
         }
         // Função para pegar a NORMA / MODULO do vetor
         function norm(vec) {
-            console.log(vec);
             return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
             /*var x = vec.x / norm;
             var y = vec.y / norm;
@@ -79,10 +49,11 @@
         }
         // Produto interno
         function dotProduct(vec1, vec2) {
-            return (vec1.x * vec2.x + vec1.y * vec2.y);
+            return (vec1.nx * vec2.nx + vec1.ny * vec2.ny);
         }
         // Calcula o angulo entre dois vetores
         function computeAngle(v1, v2) {
+
             var n1 = norm(v1);
             var x1 = v1.x / n1;
             var y1 = v1.y / n1;
@@ -96,7 +67,9 @@
             v2.setNormalizeX(x2);
             v2.setNormalizeY(y2);
             v2.setModule(n2);
+
             var ac = dotProduct(v1, v2);
+
             var norma = norm({x:v1.nx, y:v1.ny}) * norm({x:v2.nx, y:v2.ny});
             return Math.acos( ac / norma );
         }
@@ -126,16 +99,23 @@
                 }
             });
         }
+
         function radiansToDegree(radians) {
             return radians * 180 / Math.PI;
         }
+
+
         function init() {
             lowerY = checkLowerY();
             sortByAngle(objects, lowerY);
             var res = objects.sort(function(a, b) {
                 return a.angle - b.angle;
             });
+
             var objBorders = [];
+
+            //checkBorder(objects[0], objects[1], objects[2], 1);
+
             objects.map(function(vec, index){
                 if(index != 0) {
                     var result = null;  
@@ -146,24 +126,42 @@
                     }
                     if(result >= 0) {
                         objects[index].setBorder(true);
-                        objBorders.push(vec);
+                        objects[index].setVerified(true);
                     } else {
-                        var current = index - 1;
+                        console.log(vec);
+                        objects[index].setVerified(true);
+                        /*var current = index - 1;
                         var prev = current - 1;
                         var next = index + 1;
                         result = ccw(objects[prev], objects[current], objects[next]);
                         if(result >= 0) {
                             objects[current].setBorder(true);
                             objBorders.push(objects[current]);
-                        }
+                        }*/
                     }
                 } else {
                     objects[index].setBorder(true);
-                    objBorders.push(vec);
                 }
             });
-            drawObjects(objBorders);
+
+            console.log(objects);
+            drawObjects(objects);
         }
+
+        function checkBorder(prev, current, next, index) {
+            console.log(current);
+            if(current != objects.length-1) {
+                result = ccw(prev, current, next);
+                if(result >= 0) {
+                    current.setBorder(true);
+                    checkBorder(current, next, objects[index+1], index+1);
+                } else {
+                    objects[index].setBorder(false);
+                    checkBorder(objects[index-2], prev, next, index+2);
+                }
+            }
+        }
+
         function ccw(p1, p2, p3) {
             // ccw > 0: counter-clockwise; ccw < 0: clockwise; ccw = 0: collinear
             return (p2.nx - p1.nx) * (p3.ny - p1.ny) - (p2.ny - p1.ny) * (p3.nx - p1.nx);
@@ -172,8 +170,10 @@
             _objects.map(function(vec, index){
                 if(vec.isBorder) {
                     if(index != _objects.length-1) {
-                        ctx.moveTo(vec.x,vec.y);
-                        ctx.lineTo(_objects[index+1].x,_objects[index+1].y);
+                        if(_objects[index+1].isBorder) {
+                            ctx.moveTo(vec.x,vec.y);
+                            ctx.lineTo(_objects[index+1].x,_objects[index+1].y);
+                        }
                     } else {
                         ctx.moveTo(vec.x,vec.y);
                         ctx.lineTo(_objects[0].x,_objects[0].y);
