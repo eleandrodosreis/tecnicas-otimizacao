@@ -26,7 +26,7 @@
         // Angulos > 180 = Concavos
         // Angulos < 180 = Convexos
         var objects = [];
-        var pixel = 5;
+        var pixel = 10;
         var id = 0;
         var lowerY = null;
         var c = document.getElementById("myCanvas");
@@ -37,6 +37,8 @@
             p.setId(id);
             objects.push(p);
             ctx.fillRect(event.clientX,event.clientY,pixel,pixel);
+            ctx.font = "10px Arial";
+            ctx.fillText(id,event.clientX,event.clientY);
             id++;
         }
         // Função para pegar a NORMA / MODULO do vetor
@@ -113,74 +115,54 @@
             });
 
             var objBorders = [];
-
-            //checkBorder(objects[0], objects[1], objects[2], 1);
-
-            objects.map(function(vec, index){
-                if(index != 0) {
-                    var result = null;  
-                    if(index != objects.length-1) {
-                        result = ccw(objects[index-1], vec, objects[index+1]);
-                    } else {
-                        result = ccw(objects[index-1], vec, objects[0]);
-                    }
-                    if(result >= 0) {
-                        objects[index].setBorder(true);
-                        objects[index].setVerified(true);
-                    } else {
-                        console.log(vec);
-                        objects[index].setVerified(true);
-                        /*var current = index - 1;
-                        var prev = current - 1;
-                        var next = index + 1;
-                        result = ccw(objects[prev], objects[current], objects[next]);
-                        if(result >= 0) {
-                            objects[current].setBorder(true);
-                            objBorders.push(objects[current]);
-                        }*/
-                    }
-                } else {
-                    objects[index].setBorder(true);
-                }
-            });
+            var objsPilha = [];
+            var stop = false;
+            objsPilha = objects;
 
             console.log(objects);
-            drawObjects(objects);
-        }
 
-        function checkBorder(prev, current, next, index) {
-            console.log(current);
-            if(current != objects.length-1) {
-                result = ccw(prev, current, next);
-                if(result >= 0) {
-                    current.setBorder(true);
-                    checkBorder(current, next, objects[index+1], index+1);
-                } else {
-                    objects[index].setBorder(false);
-                    checkBorder(objects[index-2], prev, next, index+2);
-                }
-            }
+            /*while(!stop) {
+                objsPilha.map(function(vec, index){
+                    if(index != 0) {
+                        var result = null;
+                        if(index <= objsPilha.length-2) {
+                            result = ccw(objsPilha[index-1], vec, objsPilha[index+1]);
+                        } else {
+                            result = ccw(objsPilha[index-1], vec, objsPilha[0]);
+                        }
+
+                        if(result >= 0) {
+                            vec.setBorder(true);
+                            objBorders.push(vec);
+                        } else {
+                            objsPilha
+                        }
+                    } else {
+                        objsPilha[index].setBorder(true);
+                        objBorders.push(vec);
+                    }
+                });
+            }*/
+
+            console.log(objsPilha);
+            //drawObjects(objBorders);
         }
 
         function ccw(p1, p2, p3) {
             // ccw > 0: counter-clockwise; ccw < 0: clockwise; ccw = 0: collinear
-            return (p2.nx - p1.nx) * (p3.ny - p1.ny) - (p2.ny - p1.ny) * (p3.nx - p1.nx);
+            return ((p2.x - p1.x) * (p3.y - p1.y)) - ((p2.y - p1.y) * (p3.x - p1.x));
         }
         function drawObjects(_objects) {
             _objects.map(function(vec, index){
-                if(vec.isBorder) {
-                    if(index != _objects.length-1) {
-                        if(_objects[index+1].isBorder) {
-                            ctx.moveTo(vec.x,vec.y);
-                            ctx.lineTo(_objects[index+1].x,_objects[index+1].y);
-                        }
-                    } else {
-                        ctx.moveTo(vec.x,vec.y);
-                        ctx.lineTo(_objects[0].x,_objects[0].y);
-                    }
-                    ctx.strokeStyle="yellow";
-                    ctx.lineWidth = pixel;
+                if(index != _objects.length-1) {
+                    ctx.moveTo(vec.x,vec.y);
+                    ctx.lineTo(_objects[index+1].x,_objects[index+1].y);
+                } else {
+                    ctx.moveTo(vec.x,vec.y);
+                    ctx.lineTo(_objects[0].x,_objects[0].y);
                 }
+                ctx.strokeStyle="yellow";
+                ctx.lineWidth = pixel;
             });
             ctx.stroke();
         }
