@@ -51,29 +51,25 @@
         }
         // Produto interno
         function dotProduct(vec1, vec2) {
-            return (vec1.nx * vec2.nx + vec1.ny * vec2.ny);
+            return (vec1.x * vec2.x + vec1.y * vec2.y);
         }
         // Calcula o angulo entre dois vetores
         function computeAngle(v1, v2) {
 
-            var n1 = norm(v1);
-            var x1 = v1.x / n1;
-            var y1 = v1.y / n1;
-            v1.setNormalizeX(x1);
-            v1.setNormalizeY(y1);
-            v1.setModule(n1);
-            
-            var n2 = norm(v2);
-            var x2 = v2.x / n2;
-            var y2 = v2.y / n2;
-            v2.setNormalizeX(x2);
-            v2.setNormalizeY(y2);
-            v2.setModule(n2);
 
-            var ac = dotProduct(v1, v2);
+            var vRaw = {
+                "x":1,
+                "y":1,
+                "nx":0,
+                "ny":0
+            };
 
-            var norma = norm({x:v1.nx, y:v1.ny}) * norm({x:v2.nx, y:v2.ny});
-            return Math.acos( ac / norma );
+            var produto_interno = dotProduct(vRaw, v2);
+            var n1 = norm(vRaw); 
+            var n2 = norm(v2); 
+            var modulos = n1 * n2;
+
+            return Math.acos( produto_interno / modulos );
         }
         function checkLowerY() {
             var lowY = null;
@@ -83,7 +79,7 @@
                     lowY = obj.y;
                     vec = obj;
                 } else {
-                    if(obj.y < lowY) {
+                    if(obj.y > lowY) {
                         lowY = obj.y;
                         vec = obj;
                     }
@@ -93,7 +89,7 @@
         }
         function sortByAngle(_objects, vecLowerY) {
             var vecsAngle = [];
-            objects.map(function(obj, index) {
+            _objects.map(function(obj, index) {
                 if(vecLowerY.id != obj.id) {
                     var angle = computeAngle(vecLowerY, obj);
                     var degree = radiansToDegree(angle);
@@ -119,11 +115,15 @@
             var stop = false;
             objsPilha = objects;
 
-            console.log(objects);
-
-            /*while(!stop) {
+            while(!stop) {
                 objsPilha.map(function(vec, index){
-                    if(index != 0) {
+                    var result = null;
+                    if(index != 0 && index <= objsPilha.length-2) {
+                        result = ccw(objsPilha[index-1], vec, objsPilha[index+1]);
+                        console.log("v1:"+objsPilha[index-1].id, "v2:"+vec.id, "v3"+objsPilha[index+1].id, result);
+                    }
+
+                    /*if(index != 0) {
                         var result = null;
                         if(index <= objsPilha.length-2) {
                             result = ccw(objsPilha[index-1], vec, objsPilha[index+1]);
@@ -135,17 +135,19 @@
                             vec.setBorder(true);
                             objBorders.push(vec);
                         } else {
-                            objsPilha
+                            //objsPilha
+                            console.log('morreu');
                         }
                     } else {
                         objsPilha[index].setBorder(true);
                         objBorders.push(vec);
-                    }
+                    }*/
                 });
-            }*/
 
-            console.log(objsPilha);
-            //drawObjects(objBorders);
+                stop = true;
+            }
+            console.log(objects);
+            drawObjects(objBorders);
         }
 
         function ccw(p1, p2, p3) {
